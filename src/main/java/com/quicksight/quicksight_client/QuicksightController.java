@@ -1,11 +1,10 @@
 package com.quicksight.quicksight_client;
 
+import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import software.amazon.awssdk.services.quicksight.model.ListDashboardsResponse;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +16,7 @@ public class QuicksightController {
 
     @GetMapping(path = "/embedurl")
     public QuicksightUrlResponse getEmbedRul(@RequestParam(name = "dashboard", required = false) String dashboard) {
-        return new QuicksightUrlResponse(quicksightClient.generateAnonymousEmbedUrl(dashboard));
+        return new QuicksightUrlResponse(quicksightClient.generateEmbedUrlForAnonymousUser(dashboard));
     }
 
     @GetMapping(path = "/dashboards")
@@ -34,8 +33,13 @@ public class QuicksightController {
     }
 
     @GetMapping(path = "/dashboards/{dashboardId}")
-    public QuicksightUrlResponse getEmbedRul2(@PathVariable String dashboardId, @RequestParam String arn) {
-        return new QuicksightUrlResponse(quicksightClient.generateAnonymousEmbedUrl(DashboardSummary.builder()
-                .arn(arn).dashboardId(dashboardId).build()));
+    public QuicksightUrlResponse getEmbedRul2(@PathVariable String dashboardId, @RequestParam String arn, @RequestParam(required = false) String email) {
+        return new QuicksightUrlResponse(quicksightClient.generateEmbedUrl(
+                DashboardSummary.builder().arn(arn).dashboardId(dashboardId).build(), email));
+    }
+
+    @GetMapping(path = "/isRegistered")
+    public boolean isRegisteredQuicksightUser( @RequestParam String email) {
+        return quicksightClient.isRegisteredUser(email);
     }
 }
