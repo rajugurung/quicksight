@@ -32,6 +32,12 @@ public class QuicksightController {
         return new ResponseEntity<>(dashboardSummaries, HttpStatus.OK);
     }
 
+    @GetMapping(path = "/dashboards/arns")
+    public ResponseEntity<List<String>> getDashboardsArns() {
+        List<DashboardSummary> dashboardSummaries = new ArrayList<>();
+        return new ResponseEntity<>(quicksightClient.getDashboardArns(), HttpStatus.OK);
+    }
+
     @GetMapping(path = "/dashboards/{dashboardId}")
     public QuicksightUrlResponse getEmbedRul2(@PathVariable String dashboardId, @RequestParam String arn, @RequestParam(required = false) String email) {
         return new QuicksightUrlResponse(quicksightClient.generateEmbedUrl(

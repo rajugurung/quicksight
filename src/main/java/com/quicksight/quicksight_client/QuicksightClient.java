@@ -1,17 +1,26 @@
 package com.quicksight.quicksight_client;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.quicksight.QuickSightClient;
 import software.amazon.awssdk.services.quicksight.model.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+@RequiredArgsConstructor
 @Component
 public class QuicksightClient {
     private final String accountId = "846465295034";
     private final String seoDashboardArn = "arn:aws:quicksight:us-east-1:846465295034:dashboard/30f75183-c4f3-4451-a183-944f4f63dfa1";
     private final String orderByDayDashboardArn = "arn:aws:quicksight:us-east-1:846465295034:dashboard/2a0f2d42-7cf4-491e-b5fb-efbc7d5eb682";
+    @Value("${instance:devf}")
+    private String env;
+    private final QuickSightClient quickSightClient;
+
+    private String devfSharedFolderId = "ee9ee40a-fd53-4ff5-a7b6-0ee0b5cfe5e7";
 
     public String generateEmbedUrl(DashboardSummary dashboard, String email) {
         if( email == null || email.isBlank()) {
@@ -27,13 +36,9 @@ public class QuicksightClient {
                 .build();
 
         List<SessionTag> sessionTags = Arrays.asList(
-                SessionTag.builder().key("orderId").value("1,4").build(),
-                SessionTag.builder().key("orderId2").value("2").build()
-//                SessionTag.builder().key("itemCd").value("Pink,Purple,Maroon,PeachPuff,Coral,DimGray,Tomato,Lavender,SaddleBrown,DarkViolet,GreenYellow,OliveDrab,Yellow,Navy,HoneyDew,MediumTurquoise,DarkSlateBlue,LimeGreen,PaleGoldenRod,DarkGray,ForestGreen,Chocolate,LightSeaGreen,HotPink,Chartreuse,PaleTurquoise,MediumPurple").build()
+                SessionTag.builder().key("orderId").value("1,4").build()
+//                SessionTag.builder().key("orderId2").value("2").build()
         );
-//        List<SessionTag> sessionTags = Arrays.asList(
-//                SessionTag.builder().key("orderId").value("1").build()
-//        );
 
         // Configure the embedding request
         GenerateEmbedUrlForAnonymousUserRequest request = GenerateEmbedUrlForAnonymousUserRequest.builder()
@@ -74,7 +79,7 @@ public class QuicksightClient {
                 .awsAccountId(accountId)
                 .namespace("default") // Or your custom namespace
                 .sessionLifetimeInMinutes(60L) // Optional: adjust session duration
-                .authorizedResourceArns(Arrays.asList(dashboardUrlToRetrieve))
+                .authorizedResourceArns(Arrays.asList(dashboardUrlToRetrieve, orderByDayDashboardArn))
                 .experienceConfiguration(AnonymousUserEmbeddingExperienceConfiguration.builder()
                         .dashboard(AnonymousUserDashboardEmbeddingConfiguration.builder()
                                 .initialDashboardId(extractDashboardIdFromArn(dashboardUrlToRetrieve))
@@ -252,12 +257,25 @@ public class QuicksightClient {
     }
 
     public ListDashboardsResponse getListOfDashboards() {
+//        QuickSightClient quickSightClient = QuickSightClient.builder()
+//                .region(Region.US_EAST_1)
+//                .build();
+        ListDashboardsRequest listDashboardsRequest = ListDashboardsRequest.builder()
+                .awsAccountId(accountId).build();
+        ListDashboardsResponse listDashboardsResponse = quickSightClient.listDashboards(listDashboardsRequest);
+        return listDashboardsResponse;
+    }
+
+    public List<String> getDashboardArns() {
         QuickSightClient quickSightClient = QuickSightClient.builder()
                 .region(Region.US_EAST_1)
                 .build();
-        ListDashboardsRequest listDashboardsRequest = ListDashboardsRequest.builder().awsAccountId(accountId).build();
-        ListDashboardsResponse listDashboardsResponse = quickSightClient.listDashboards(listDashboardsRequest);
-        return listDashboardsResponse;
+
+        ListFolderMembersRequest listRequest = ListFolderMembersRequest.builder().awsAccountId(accountId).folderId(devfSharedFolderId).build();
+        ListFolderMembersResponse listResponse = quickSightClient.listFolderMembers(listRequest);
+        List<String> dashboardArns = listResponse.folderMemberList().stream().map(MemberIdArnPair::memberArn).filter(s -> s
+                .contains(":dashboard/")).toList();
+        return dashboardArns;
     }
 
     private String extractDashboardIdFromArn(String dashboardArn) {
